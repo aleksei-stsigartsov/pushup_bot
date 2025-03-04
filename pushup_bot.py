@@ -165,7 +165,7 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
     if update and update.message:
         await update.message.reply_text("Произошла ошибка. Попробуйте снова.")
 
-application = Application.builder().token("7892017077:AAGdD3LMXoTwzclDNasSpf5eutD6gm6WflM").build()
+application = Application.builder().token(BOT_TOKEN).build()
 
 application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("register", register))
