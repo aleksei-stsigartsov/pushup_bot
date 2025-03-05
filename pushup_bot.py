@@ -7,18 +7,24 @@ from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKe
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, CallbackContext
 from telegram.ext import filters
 from dotenv import load_dotenv
+from flask import Flask
+import threading
 import re
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_flask():
+    app.run(host="0.0.0.0", port=5000)
 
 load_dotenv()
 
 def load_pushup_quotes():
     with open("pushup_quotes.json", "r", encoding="utf-8") as file:
         return json.load(file)
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-if not BOT_TOKEN:
-    raise ValueError("Токен не найден! Проверь .env файл.")
 
 DATA_FILE = "pushup_data.json"
 
@@ -165,16 +171,25 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
     if update and update.message:
         await update.message.reply_text("Произошла ошибка. Попробуйте снова.")
 
-application = Application.builder().token(BOT_TOKEN).build()
 
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CommandHandler("register", register))
-application.add_handler(CommandHandler("remove", remove))
-application.add_handler(CommandHandler("pushups", pushups))
-application.add_handler(CommandHandler("status", status))
-application.add_handler(CommandHandler("debts", show_all_debts))
-application.add_handler(CallbackQueryHandler(confirm_remove))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-application.add_error_handler(error_handler)
+if __name__ == "__main__":
+    import asyncio
+    from telegram.ext import Application
 
-application.run_polling()
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("register", register))
+    application.add_handler(CommandHandler("remove", remove))
+    application.add_handler(CommandHandler("pushups", pushups))
+    application.add_handler(CommandHandler("status", status))
+    application.add_handler(CommandHandler("debts", show_all_debts))
+    application.add_handler(CallbackQueryHandler(confirm_remove))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    application.add_error_handler(error_handler)
+
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
+
+    application.run_polling()
