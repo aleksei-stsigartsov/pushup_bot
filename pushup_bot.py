@@ -171,6 +171,18 @@ async def error_handler(update: Update, context: CallbackContext) -> None:
     if update and update.message:
         await update.message.reply_text("Произошла ошибка. Попробуйте снова.")
 
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+async def set_webhook():
+    await application.bot.set_webhook(WEBHOOK_URL)
+
+async def webhook_handler(update: Update, context: CallbackContext):
+    await application.process_update(update)
+
+app.add_url_rule(f"/{BOT_TOKEN}", "webhook", webhook_handler, methods=["POST"])
+
+
 
 if __name__ == "__main__":
     import asyncio
@@ -188,6 +200,9 @@ if __name__ == "__main__":
     application.add_handler(CallbackQueryHandler(confirm_remove))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     application.add_error_handler(error_handler)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(set_webhook())
 
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
