@@ -51,7 +51,7 @@ logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 keyboard = [
     ["Мой долг", "Добавить отжимания"], 
-    ["Зарегистрироваться", "Изгнать лузера"], 
+    ["Запись кровью", "Изгнать лузера"], 
     ["Долги пацанов"]
 ]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -157,13 +157,13 @@ async def handle_text(update: Update, context: CallbackContext) -> None:
     elif text == "Добавить отжимания":
         await update.message.reply_text("Введите количество отжиманий командой, например: /pushups 20")
     
-    elif text == "Зарегистрироваться":
+    elif text == "Запись кровью":
         await register(update, context)
     
-    elif text == "Удалить пользователя":
+    elif text == "Изгнать лузера":
         await remove(update, context)
     
-    elif text == "Долги всех участников":
+    elif text == "Долги пацанов":
         await show_all_debts(update, context)
 
 async def error_handler(update: Update, context: CallbackContext) -> None:
