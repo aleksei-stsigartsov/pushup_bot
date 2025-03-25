@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from flask import Flask
 import threading
 import re
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.daily import DailyTrigger
 
 app = Flask(__name__)
 
@@ -27,8 +29,6 @@ def load_pushup_quotes():
         return json.load(file)
 
 DATA_FILE = "pushup_data.json"
-
-
 PUSHUP_QUOTES = load_pushup_quotes()
 
 def load_data():
@@ -50,9 +50,9 @@ data = load_data()
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 keyboard = [
-    ["Мой долг", "Добавить отжимания"], 
-    ["Запись кровью", "Изгнать лузера"], 
-    ["Долги пацанов"]
+    ["/status", "/pushups"],
+    ["/register", "/remove"],
+    ["/debts"]
 ]
 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -64,6 +64,18 @@ def process_pushup_quote(quote):
     if match:
         return int(match.group(1))
     return 0
+
+# Функция для начисления 50 отжиманий каждому пользователю каждый день в 00:00
+def reset_debts():
+    for username in data:
+        data[username]["debt"] += 50  # Начисляем 50 отжиманий
+    save_data(data)
+    logging.info("Долги всех пользователей обновлены на 50 отжиманий.")
+
+# Планировщик задач для ежедневного выполнения
+scheduler = BackgroundScheduler()
+scheduler.add_job(reset_debts, DailyTrigger(hour=0, minute=0, second=0))  # Ежедневно в 00:00
+scheduler.start()
 
 async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text("Анжуманя!", reply_markup=reply_markup)
@@ -133,61 +145,17 @@ async def show_all_debts(update: Update, context: CallbackContext) -> None:
     debt_message = "Долги всех участников:\n"
     for username, info in data.items():
         debt = info["debt"]
-        if debt > 500:
-            debt_message += f"{username}: {debt} отжиманий 🪦 (рест ин пис бро...)\n"
-        elif debt > 300:
-            debt_message += f"{username}: {debt} отжиманий 💀 (ему почти пизда)\n"
-        elif debt > 100:
-            debt_message += f"{username}: {debt} отжиманий ... (аккуратнее парень. бог следит за тобой)\n"
-        else:
-            debt_message += f"{username}: {debt} отжиманий\n"
+        debt_message += f"{username}: {debt} отжиманий\n"
     
     await update.message.reply_text(debt_message)
-
-async def handle_text(update: Update, context: CallbackContext) -> None:
-    text = update.message.text
-    username = update.message.from_user.username
-
-    if text == "Мой долг":
-        if username not in data:
-            await update.message.reply_text("Вы не зарегистрированы! Используйте /register.")
-            return
-        await update.message.reply_text(f"{username}, ваш текущий долг: {data[username]['debt']} отжиманий.")
-    
-    elif text == "Добавить отжимания":
-        await update.message.reply_text("Введите количество отжиманий командой, например: /pushups 20")
-    
-    elif text == "Запись кровью":
-        await register(update, context)
-    
-    elif text == "Изгнать лузера":
-        await remove(update, context)
-    
-    elif text == "Долги пацанов":
-        await show_all_debts(update, context)
 
 async def error_handler(update: Update, context: CallbackContext) -> None:
     logging.error(f"Произошла ошибка: {context.error}")
     if update and update.message:
         await update.message.reply_text("Произошла ошибка. Попробуйте снова.")
 
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-async def set_webhook():
-    await application.bot.set_webhook(WEBHOOK_URL)
-
-async def webhook_handler(update: Update, context: CallbackContext):
-    await application.process_update(update)
-
-app.add_url_rule(f"/{BOT_TOKEN}", "webhook", webhook_handler, methods=["POST"])
-
-
-
 if __name__ == "__main__":
     import asyncio
-    from telegram.ext import Application
-
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     application = Application.builder().token(BOT_TOKEN).build()
 
@@ -198,13 +166,8 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("status", status))
     application.add_handler(CommandHandler("debts", show_all_debts))
     application.add_handler(CallbackQueryHandler(confirm_remove))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     application.add_error_handler(error_handler)
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(set_webhook())
-
+    
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
-
     application.run_polling()
