@@ -11,7 +11,7 @@ from flask import Flask
 import threading
 import re
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 app = Flask(__name__)
 
@@ -74,7 +74,7 @@ def reset_debts():
 
 # Планировщик задач для ежедневного выполнения
 scheduler = BackgroundScheduler()
-scheduler.add_job(reset_debts, IntervalTrigger(days=1, hours=0, minutes=0))  # Ежедневно в 00:00
+scheduler.add_job(reset_debts, CronTrigger(hour=0, minute=0))  # Ежедневно в 00:00
 scheduler.start()
 
 async def start(update: Update, context: CallbackContext) -> None:
