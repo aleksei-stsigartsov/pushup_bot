@@ -50,7 +50,7 @@ data = load_data()
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 keyboard = [
-    ["/status", "/pushups"],
+    ["/status", "/pushups 50"],
     ["/register", "/remove"],
     ["/debts"]
 ]
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     application.add_handler(CommandHandler("debts", show_all_debts))
     application.add_handler(CallbackQueryHandler(confirm_remove))
     application.add_error_handler(error_handler)
-    
+
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
     application.run_polling()
